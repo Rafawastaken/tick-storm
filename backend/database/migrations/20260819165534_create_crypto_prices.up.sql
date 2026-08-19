@@ -1,0 +1,6 @@
+CREATE TABLE crypto_prices (
+    id BIGSERIAL PRIMARY KEY NOT NULL,
+    coin_symbol VARCHAR(20) NOT NULL,
+    coin_price NUMERIC(18, 8) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+)

@@ -1,0 +1,9 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    schema: "database/migrations"
+    queries: "database/queries/crypto"
+    gen:
+      go:
+        package: "cryptodb"
+        out: "internal/crypto/cryptodb"
