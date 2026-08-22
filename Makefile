@@ -1,7 +1,18 @@
 # ------------------------------------------------------------------
 # TickStorm - automação de desenvolvimento
 # ------------------------------------------------------------------
+# On Windows, make defaults to cmd.exe, which has no grep/test/awk. Point it at
+# the sh.exe that ships with Git. Short 8.3 path: spaces in SHELL break make.
+ifeq ($(OS),Windows_NT)
+SHELL := C:/PROGRA~1/Git/usr/bin/sh.exe
+# sh alone is not enough: launched from cmd or PowerShell it inherits a PATH
+# without grep, awk or cp. Prepending Git's usr/bin makes recipes portable.
+export PATH := C:/PROGRA~1/Git/usr/bin;$(PATH)
+else
 SHELL := /bin/sh
+endif
+.SHELLFLAGS := -c
+
 BACKEND_DIR := backend
 MIGRATIONS_DIR := $(BACKEND_DIR)/database/migrations
 

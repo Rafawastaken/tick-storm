@@ -19,6 +19,6 @@ func (a *App) routes() http.Handler {
 	r.Get(apiPrefix+"/health", a.handleHealth)
 	r.Get(apiPrefix+"/ready", a.handleReady)
 
-	// r.Mount(apiPrefix+"/crypto", cryptoHandler.Routes())
+	r.Mount(apiPrefix+"/crypto", a.crypto.Routes())
 	return r
 }

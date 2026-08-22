@@ -10,7 +10,9 @@ import (
 
 type CryptoPrice struct {
 	ID         int64
+	Exchange   string
 	CoinSymbol string
 	CoinPrice  pgtype.Numeric
+	TradeID    *int64
 	CreatedAt  pgtype.Timestamptz
 }

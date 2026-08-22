@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/shopspring/decimal"
 )
 
 // Helpers to convert between pgx/pgtype values (returned by sqlc) and native
@@ -14,8 +15,9 @@ import (
 //   - Ptr in the name indicates the pointer side (*time.Time)
 //   - nil pointer / !Valid pgtype → returns zero-value or nil depending on the target
 //
-// NOTE: there are deliberately NO float<->Numeric helpers here. A lossy float
-// round-trip has no place on price data.
+// NOTE: there are deliberately NO float<->Numeric helpers here. Prices go
+// through shopspring/decimal end-to-end; a lossy float round-trip has no
+// place on price data.
 
 // --- Timestamptz ---
 
@@ -106,4 +108,25 @@ func StringPtr(s string) *string {
 		return nil
 	}
 	return &s
+}
+
+// --- Numeric ---
+
+// NumericToDecimal converts an exact pgtype.Numeric into a decimal.Decimal.
+// An invalid (NULL) or non-finite value yields the zero decimal.
+func NumericToDecimal(n pgtype.Numeric) decimal.Decimal {
+	if !n.Valid || n.NaN || n.InfinityModifier != pgtype.Finite {
+		return decimal.Zero
+	}
+	return decimal.NewFromBigInt(n.Int, n.Exp)
+}
+
+// DecimalToNumeric is the inverse. Both types hold a big.Int coefficient and a
+// base-10 exponent, so the round trip is lossless.
+func DecimalToNumeric(d decimal.Decimal) pgtype.Numeric {
+	return pgtype.Numeric{
+		Int:   d.Coefficient(),
+		Exp:   d.Exponent(),
+		Valid: true,
+	}
 }

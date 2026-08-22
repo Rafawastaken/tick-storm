@@ -12,6 +12,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/rafawastaken/tick-storm/backend/internal/config"
+	"github.com/rafawastaken/tick-storm/backend/internal/crypto"
 	"github.com/rafawastaken/tick-storm/backend/pkg/logger"
 )
 
@@ -25,6 +26,8 @@ type App struct {
 	log    *slog.Logger
 	pool   *pgxpool.Pool
 	server *http.Server
+
+	crypto *crypto.Handler
 }
 
 // New builds the application and its resources. Fails fast: an unreachable
@@ -43,6 +46,9 @@ func New(ctx context.Context) (*App, error) {
 	}
 
 	a := &App{cfg: cfg, log: log, pool: pool}
+
+	// Manual dependency injection, one slice at a time.
+	a.crypto = crypto.NewHandler(crypto.NewService(crypto.NewStore(pool)))
 
 	a.server = &http.Server{
 		Addr:    fmt.Sprintf(":%d", cfg.App.Port),

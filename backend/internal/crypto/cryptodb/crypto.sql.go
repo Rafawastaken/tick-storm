@@ -12,35 +12,90 @@ import (
 )
 
 const getLatestPrice = `-- name: GetLatestPrice :one
-SELECT id, coin_symbol, coin_price, created_at FROM crypto_prices
-WHERE coin_symbol = $1
-ORDER BY created_at DESC
+SELECT id, exchange, coin_symbol, coin_price, trade_id, created_at FROM crypto_prices
+WHERE exchange = $1 AND coin_symbol = $2
+ORDER BY created_at DESC, id DESC
 LIMIT 1
 `
 
-func (q *Queries) GetLatestPrice(ctx context.Context, coinSymbol string) (CryptoPrice, error) {
-	row := q.db.QueryRow(ctx, getLatestPrice, coinSymbol)
+type GetLatestPriceParams struct {
+	Exchange   string
+	CoinSymbol string
+}
+
+func (q *Queries) GetLatestPrice(ctx context.Context, arg GetLatestPriceParams) (CryptoPrice, error) {
+	row := q.db.QueryRow(ctx, getLatestPrice, arg.Exchange, arg.CoinSymbol)
 	var i CryptoPrice
 	err := row.Scan(
 		&i.ID,
+		&i.Exchange,
 		&i.CoinSymbol,
 		&i.CoinPrice,
+		&i.TradeID,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
-const insertCryptoPrices = `-- name: InsertCryptoPrices :exec
-INSERT INTO crypto_prices (coin_symbol, coin_price)
-VALUES ($1, $2)
+const insertPrice = `-- name: InsertPrice :exec
+INSERT INTO crypto_prices (exchange, coin_symbol, coin_price, trade_id)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT DO NOTHING
 `
 
-type InsertCryptoPricesParams struct {
+type InsertPriceParams struct {
+	Exchange   string
 	CoinSymbol string
 	CoinPrice  pgtype.Numeric
+	TradeID    *int64
 }
 
-func (q *Queries) InsertCryptoPrices(ctx context.Context, arg InsertCryptoPricesParams) error {
-	_, err := q.db.Exec(ctx, insertCryptoPrices, arg.CoinSymbol, arg.CoinPrice)
+func (q *Queries) InsertPrice(ctx context.Context, arg InsertPriceParams) error {
+	_, err := q.db.Exec(ctx, insertPrice,
+		arg.Exchange,
+		arg.CoinSymbol,
+		arg.CoinPrice,
+		arg.TradeID,
+	)
 	return err
+}
+
+const listPricesForCoin = `-- name: ListPricesForCoin :many
+SELECT id, exchange, coin_symbol, coin_price, trade_id, created_at FROM crypto_prices
+WHERE exchange = $1 AND coin_symbol = $2
+ORDER BY created_at DESC, id DESC
+LIMIT $3
+`
+
+type ListPricesForCoinParams struct {
+	Exchange   string
+	CoinSymbol string
+	MaxResults int32
+}
+
+func (q *Queries) ListPricesForCoin(ctx context.Context, arg ListPricesForCoinParams) ([]CryptoPrice, error) {
+	rows, err := q.db.Query(ctx, listPricesForCoin, arg.Exchange, arg.CoinSymbol, arg.MaxResults)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CryptoPrice
+	for rows.Next() {
+		var i CryptoPrice
+		if err := rows.Scan(
+			&i.ID,
+			&i.Exchange,
+			&i.CoinSymbol,
+			&i.CoinPrice,
+			&i.TradeID,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
