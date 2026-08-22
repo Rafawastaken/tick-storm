@@ -7,6 +7,8 @@ package cryptodb
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const getLatestPrice = `-- name: GetLatestPrice :one
@@ -17,7 +19,7 @@ LIMIT 1
 `
 
 func (q *Queries) GetLatestPrice(ctx context.Context, coinSymbol string) (CryptoPrice, error) {
-	row := q.db.QueryRowContext(ctx, getLatestPrice, coinSymbol)
+	row := q.db.QueryRow(ctx, getLatestPrice, coinSymbol)
 	var i CryptoPrice
 	err := row.Scan(
 		&i.ID,
@@ -35,10 +37,10 @@ VALUES ($1, $2)
 
 type InsertCryptoPricesParams struct {
 	CoinSymbol string
-	CoinPrice  string
+	CoinPrice  pgtype.Numeric
 }
 
 func (q *Queries) InsertCryptoPrices(ctx context.Context, arg InsertCryptoPricesParams) error {
-	_, err := q.db.ExecContext(ctx, insertCryptoPrices, arg.CoinSymbol, arg.CoinPrice)
+	_, err := q.db.Exec(ctx, insertCryptoPrices, arg.CoinSymbol, arg.CoinPrice)
 	return err
 }

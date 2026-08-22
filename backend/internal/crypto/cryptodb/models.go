@@ -5,12 +5,12 @@
 package cryptodb
 
 import (
-	"database/sql"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type CryptoPrice struct {
 	ID         int64
 	CoinSymbol string
-	CoinPrice  string
-	CreatedAt  sql.NullTime
+	CoinPrice  pgtype.Numeric
+	CreatedAt  pgtype.Timestamptz
 }
