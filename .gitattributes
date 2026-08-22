@@ -1,0 +1,6 @@
+* text=auto eol=lf
+*.go text eol=lf
+*.sql text eol=lf
+Makefile text eol=lf
+*.png binary
+*.jpg binary
