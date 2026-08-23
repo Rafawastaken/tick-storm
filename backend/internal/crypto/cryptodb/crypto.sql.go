@@ -62,19 +62,29 @@ func (q *Queries) InsertPrice(ctx context.Context, arg InsertPriceParams) error 
 
 const listPricesForCoin = `-- name: ListPricesForCoin :many
 SELECT id, exchange, coin_symbol, coin_price, trade_id, created_at FROM crypto_prices
-WHERE exchange = $1 AND coin_symbol = $2
+WHERE exchange = $1
+  AND coin_symbol = $2
+  AND (created_at, id) < ($3::timestamptz, $4::bigint)
 ORDER BY created_at DESC, id DESC
-LIMIT $3
+LIMIT $5
 `
 
 type ListPricesForCoinParams struct {
 	Exchange   string
 	CoinSymbol string
+	BeforeTime pgtype.Timestamptz
+	BeforeID   int64
 	MaxResults int32
 }
 
 func (q *Queries) ListPricesForCoin(ctx context.Context, arg ListPricesForCoinParams) ([]CryptoPrice, error) {
-	rows, err := q.db.Query(ctx, listPricesForCoin, arg.Exchange, arg.CoinSymbol, arg.MaxResults)
+	rows, err := q.db.Query(ctx, listPricesForCoin,
+		arg.Exchange,
+		arg.CoinSymbol,
+		arg.BeforeTime,
+		arg.BeforeID,
+		arg.MaxResults,
+	)
 	if err != nil {
 		return nil, err
 	}

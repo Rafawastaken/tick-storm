@@ -11,6 +11,8 @@ LIMIT 1;
 
 -- name: ListPricesForCoin :many
 SELECT * FROM crypto_prices
-WHERE exchange = $1 AND coin_symbol = $2
+WHERE exchange = $1
+  AND coin_symbol = $2
+  AND (created_at, id) < (sqlc.arg(before_time)::timestamptz, sqlc.arg(before_id)::bigint)
 ORDER BY created_at DESC, id DESC
 LIMIT sqlc.arg(max_results);

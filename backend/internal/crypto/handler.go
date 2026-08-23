@@ -1,7 +1,6 @@
 package crypto
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -21,18 +20,55 @@ func NewHandler(svc *Service) *Handler {
 
 func (h *Handler) Routes() chi.Router {
 	r := chi.NewRouter()
+	r.Get("/{symbol}/latest", h.getLatest)
+	r.Get("/{symbol}/prices", h.listPrices)
 	return r
 }
 
-// writeError maps domain errors to status codes. Anything unmapped is a bug
-// or an outage, so it goes to WriteInternal and gets logged there.
-func (h *Handler) writeError(w http.ResponseWriter, r *http.Request, err error) {
-	switch {
-	case errors.Is(err, ErrNotFound):
-		httpx.WriteError(w, http.StatusNotFound, "price not found")
-	case errors.Is(err, ErrInvalidSymbol):
-		httpx.WriteError(w, http.StatusBadRequest, "invalid symbol")
-	default:
-		httpx.WriteInternal(w, r, err)
+func (h *Handler) getLatest(w http.ResponseWriter, r *http.Request) {
+	price, err := h.svc.GetLatestPrice(r.Context(), GetLatestPriceIn{
+		Exchange:   r.URL.Query().Get("exchange"),
+		CoinSymbol: chi.URLParam(r, "symbol"),
+	})
+	if err != nil {
+		h.writeError(w, r, err)
+		return
 	}
+	httpx.WriteJSON(w, http.StatusOK, toResponse(price))
+}
+
+func (h *Handler) listPrices(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+
+	in := ListPricesForCoinIn{
+		Exchange:   q.Get("exchange"),
+		CoinSymbol: chi.URLParam(r, "symbol"),
+	}
+	if limit := httpx.ParseOptInt(q.Get("limit")); limit != nil {
+		in.Limit = *limit
+	}
+	if raw := q.Get("cursor"); raw != "" {
+		cursor, err := decodeCursor(raw)
+		if err != nil {
+			httpx.WriteError(w, http.StatusBadRequest, "invalid cursor")
+			return
+		}
+		in.Before = cursor
+	}
+
+	prices, err := h.svc.ListPricesForCoin(r.Context(), in)
+	if err != nil {
+		h.writeError(w, r, err)
+		return
+	}
+
+	resp := pricesResponse{Data: make([]priceResponse, 0, len(prices))}
+	for _, p := range prices {
+		resp.Data = append(resp.Data, toResponse(p))
+	}
+	if len(prices) > 0 {
+		resp.NextCursor = encodeCursor(prices[len(prices)-1])
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, resp)
 }
