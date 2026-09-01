@@ -11,13 +11,11 @@ import (
 )
 
 func main() {
-	// Turns Ctrl+C and SIGTERM (what Docker and Kubernetes send) into a
-	// cancelled context.
 	ctx, stop := signal.NotifyContext(context.Background(),
 		os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	if err := app.RunAPI(ctx); err != nil {
-		log.Fatalf("api: %v", err)
+	if err := app.RunWorker(ctx); err != nil {
+		log.Fatalf("worker: %v", err)
 	}
 }

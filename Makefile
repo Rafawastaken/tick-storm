@@ -28,13 +28,14 @@ POSTGRES_USER ?= root
 POSTGRES_PASSWORD ?= toor
 POSTGRES_DB ?= tickstorm
 POSTGRES_SSLMODE ?= disable
+WORKER_PORT ?= 8081
 
 # Derived from the parts above so .env stays the single source of truth.
 DATABASE_URL ?= postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(POSTGRES_HOST):$(POSTGRES_PORT)/$(POSTGRES_DB)?sslmode=$(POSTGRES_SSLMODE)
 
 .DEFAULT_GOAL := help
 .PHONY: help tools env infra-up infra-down infra-logs infra-reset infra-ps \
-        run build tidy db-gen migrate-up migrate-down migrate-create migrate-force psql redis-cli
+        run run-worker build tidy db-gen migrate-up migrate-down migrate-create migrate-force psql redis-cli
 
 help: ## Lista os comandos disponíveis
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -64,11 +65,15 @@ infra-logs: ## Segue os logs da infraestrutura
 	docker compose logs -f
 
 # --------------------------- Aplicação ----------------------------
-run: ## Arranca o backend com live-reload (Air)
+run: ## Arranca a API com live-reload (Air)
 	cd $(BACKEND_DIR) && air
 
-build: ## Compila o binário da API
+run-worker: ## Arranca o worker de ingestao (porta distinta da API)
+	cd $(BACKEND_DIR) && APP_PORT=$(WORKER_PORT) go run ./cmd/worker
+
+build: ## Compila os dois binários
 	cd $(BACKEND_DIR) && go build -o ../bin/api ./cmd/api
+	cd $(BACKEND_DIR) && go build -o ../bin/worker ./cmd/worker
 
 tidy: ## Sincroniza as dependências do módulo
 	cd $(BACKEND_DIR) && go mod tidy

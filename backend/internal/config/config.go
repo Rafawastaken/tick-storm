@@ -17,6 +17,8 @@ type Config struct {
 	App      AppConfig      `mapstructure:"app"`
 	Postgres PostgresConfig `mapstructure:"postgres"`
 	Redis    RedisConfig    `mapstructure:"redis"`
+	Binance  BinanceConfig  `mapstructure:"binance"`
+	Ingest   IngestConfig   `mapstructure:"ingest"`
 }
 
 type AppConfig struct {
@@ -41,6 +43,16 @@ type RedisConfig struct {
 	Host string `mapstructure:"host"`
 	Port int    `mapstructure:"port"`
 	DB   int    `mapstructure:"db"`
+}
+
+type BinanceConfig struct {
+	// Empty falls back to the client's own default endpoint.
+	WSURL string `mapstructure:"ws_url"`
+}
+
+// The process role is chosen by which binary runs, not by config.
+type IngestConfig struct {
+	Symbols []string `mapstructure:"symbols"`
 }
 
 // Load reads configuration in order of precedence: environment > .env > defaults.
@@ -104,6 +116,11 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("redis.host", "localhost")
 	v.SetDefault("redis.port", 6379)
 	v.SetDefault("redis.db", 0)
+
+	v.SetDefault("binance.ws_url", "")
+
+	// Viper splits a comma-separated env var into a slice.
+	v.SetDefault("ingest.symbols", []string{"BTCUSDT", "ETHUSDT"})
 }
 
 func (c *Config) validate() error {
@@ -115,6 +132,9 @@ func (c *Config) validate() error {
 	}
 	if c.App.Port < 1 || c.App.Port > 65535 {
 		return fmt.Errorf("invalid APP_PORT: %d", c.App.Port)
+	}
+	if len(c.Ingest.Symbols) == 0 {
+		return errors.New("INGEST_SYMBOLS is required")
 	}
 	if c.Postgres.MinConns > c.Postgres.MaxConns {
 		return fmt.Errorf(
