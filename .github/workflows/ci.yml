@@ -68,10 +68,11 @@ jobs:
       - name: Test
         run: go test -race ./...
 
-      - name: Install database tools
-        run: |
-          go install -tags postgres github.com/golang-migrate/migrate/v4/cmd/migrate@latest
-          go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
+      # Pinned: @latest makes the job non-reproducible — a new release breaks
+      # CI with no change to this repo. sqlc is pinned in go.mod as a tool;
+      # migrate cannot be, since its CLI needs build tags to register drivers.
+      - name: Install golang-migrate
+        run: go install -tags postgres github.com/golang-migrate/migrate/v4/cmd/migrate@v4.19.0
 
       - name: Run migrations
         run: migrate -path database/migrations -database "$DATABASE_URL" up
@@ -79,4 +80,4 @@ jobs:
           DATABASE_URL: postgresql://root:toor@localhost:5432/tickstorm?sslmode=disable
 
       - name: Verify generated code is committed
-        run: sqlc diff
+        run: go tool sqlc diff

@@ -40,10 +40,9 @@ help: ## Lista os comandos disponíveis
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
 
 # ---------------------------- Setup -------------------------------
-tools: ## Instala as ferramentas de desenvolvimento (air, sqlc, migrate)
+tools: ## Instala as ferramentas de desenvolvimento (air, migrate)
 	go install github.com/air-verse/air@latest
-	go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
-	go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+	go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.19.0
 
 env: ## Cria o .env a partir do .env.example (não sobrepõe um existente)
 	@test -f .env && echo ".env já existe, nada a fazer." || (cp .env.example .env && echo ".env criado.")
@@ -75,8 +74,8 @@ tidy: ## Sincroniza as dependências do módulo
 	cd $(BACKEND_DIR) && go mod tidy
 
 # --------------------------- Base de dados ------------------------
-db-gen: ## Gera o código type-safe a partir do SQL (sqlc)
-	cd $(BACKEND_DIR) && sqlc generate
+db-gen: ## Gera o código type-safe a partir do SQL (sqlc, versão fixada no go.mod)
+	cd $(BACKEND_DIR) && go tool sqlc generate
 
 migrate-up: ## Aplica todas as migrações pendentes
 	migrate -path $(MIGRATIONS_DIR) -database "$(DATABASE_URL)" up
