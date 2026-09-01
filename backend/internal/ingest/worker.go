@@ -12,12 +12,13 @@ const reportInterval = 10 * time.Second
 
 func (w *Worker) Run(ctx context.Context) error {
 	w.log.Info("ingest worker starting", "symbols", w.symbols)
+	w.lastTradeAt.Store(time.Now().UnixNano()) // ← nova
 
 	g, ctx := errgroup.WithContext(ctx)
 
 	g.Go(func() error { return w.report(ctx) })
 	g.Go(func() error {
-		return w.client.StreamTrades(ctx, w.symbols, func(t binance.Trade) error {
+		return w.client.StreamTradesWithRetry(ctx, w.symbols, func(t binance.Trade) error {
 			price, err := toPrice(t)
 			if err != nil {
 				w.skipped.Add(1)
@@ -28,6 +29,7 @@ func (w *Worker) Run(ctx context.Context) error {
 				return err
 			}
 			w.ingested.Add(1)
+			w.lastTradeAt.Store(time.Now().UnixNano())
 			w.lagUS.Store(time.Since(t.Time()).Microseconds())
 			return nil
 		})

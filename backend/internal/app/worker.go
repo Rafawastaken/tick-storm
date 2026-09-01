@@ -30,7 +30,7 @@ func RunWorker(ctx context.Context) error {
 	)
 
 	g, ctx := errgroup.WithContext(ctx)
-	b.serveHTTP(ctx, g, b.httpServer(b.probeRoutes()))
+	b.serveHTTP(ctx, g, b.httpServer(b.probeRoutes(w)))
 	g.Go(func() error {
 		return w.Run(ctx)
 	})
@@ -38,13 +38,13 @@ func RunWorker(ctx context.Context) error {
 }
 
 // probeRoutes is the minimal surface a worker needs: probes today, /metrics next.
-func (b *base) probeRoutes() http.Handler {
+func (b *base) probeRoutes(w *ingest.Worker) http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Recoverer)
 
 	r.Get("/health", b.handleHealth)
-	r.Get("/ready", b.handleReady)
+	r.Get("/ready", b.workerReady(w))
 
 	return r
 }

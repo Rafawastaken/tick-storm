@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/rafawastaken/tick-storm/backend/internal/ingest"
 	"github.com/rafawastaken/tick-storm/backend/pkg/httpx"
 )
 
@@ -31,4 +32,27 @@ func (b *base) handleReady(w http.ResponseWriter, r *http.Request) {
 		"status":  "ready",
 		"ping_ms": float64(elapsed.Microseconds()) / 1000.0,
 	})
+}
+
+func (b *base) workerReady(w *ingest.Worker) http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), readyTimeout)
+		defer cancel()
+
+		if err := b.pool.Ping(ctx); err != nil {
+			httpx.WriteError(rw, http.StatusServiceUnavailable, "database unavailable")
+			return
+		}
+
+		silent := w.SilentFor()
+		if silent > b.cfg.Ingest.MaxSilence {
+			httpx.WriteError(rw, http.StatusServiceUnavailable, "stream stalled")
+			return
+		}
+
+		httpx.WriteJSON(rw, http.StatusOK, map[string]any{
+			"status":     "ready",
+			"silent_for": silent.Round(time.Millisecond).String(),
+		})
+	}
 }

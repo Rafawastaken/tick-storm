@@ -52,7 +52,8 @@ type BinanceConfig struct {
 
 // The process role is chosen by which binary runs, not by config.
 type IngestConfig struct {
-	Symbols []string `mapstructure:"symbols"`
+	Symbols    []string      `mapstructure:"symbols"`
+	MaxSilence time.Duration `mapstructure:"max_silence"`
 }
 
 // Load reads configuration in order of precedence: environment > .env > defaults.
@@ -121,6 +122,7 @@ func setDefaults(v *viper.Viper) {
 
 	// Viper splits a comma-separated env var into a slice.
 	v.SetDefault("ingest.symbols", []string{"BTCUSDT", "ETHUSDT"})
+	v.SetDefault("ingest.max_silence", "30s")
 }
 
 func (c *Config) validate() error {
