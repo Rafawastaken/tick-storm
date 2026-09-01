@@ -46,6 +46,7 @@ func (s *Store) InsertPrice(ctx context.Context, p Price) error {
 		CoinSymbol: p.Symbol,
 		CoinPrice:  pgxkit.DecimalToNumeric(p.Price),
 		TradeID:    p.TradeID,
+		TradedAt:   pgtype.Timestamptz{Time: p.TradedAt, Valid: true},
 	})
 	if err != nil {
 		return fmt.Errorf("insert price: %w", err)
@@ -62,7 +63,7 @@ func (s *Store) ListPricesForCoin(ctx context.Context, in ListPricesForCoinIn) (
 		BeforeID:   math.MaxInt64,
 	}
 	if in.Before != nil {
-		params.BeforeTime = pgtype.Timestamptz{Time: in.Before.CreatedAt, Valid: true}
+		params.BeforeTime = pgtype.Timestamptz{Time: in.Before.TradedAt, Valid: true}
 		params.BeforeID = in.Before.ID
 	}
 

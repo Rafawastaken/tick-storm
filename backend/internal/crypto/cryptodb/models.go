@@ -14,5 +14,6 @@ type CryptoPrice struct {
 	CoinSymbol string
 	CoinPrice  pgtype.Numeric
 	TradeID    *int64
+	TradedAt   pgtype.Timestamptz
 	CreatedAt  pgtype.Timestamptz
 }

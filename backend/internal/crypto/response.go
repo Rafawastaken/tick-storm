@@ -13,10 +13,10 @@ import (
 )
 
 type priceResponse struct {
-	Exchange  string    `json:"exchange"`
-	Symbol    string    `json:"symbol"`
-	Price     string    `json:"price"`
-	CreatedAt time.Time `json:"created_at"`
+	Exchange string    `json:"exchange"`
+	Symbol   string    `json:"symbol"`
+	Price    string    `json:"price"`
+	TradedAt time.Time `json:"traded_at"`
 }
 
 type pricesResponse struct {
@@ -26,15 +26,15 @@ type pricesResponse struct {
 
 func toResponse(p Price) priceResponse {
 	return priceResponse{
-		Exchange:  p.Exchange,
-		Symbol:    p.Symbol,
-		Price:     p.Price.String(),
-		CreatedAt: p.CreatedAt,
+		Exchange: p.Exchange,
+		Symbol:   p.Symbol,
+		Price:    p.Price.String(),
+		TradedAt: p.TradedAt,
 	}
 }
 
 func encodeCursor(p Price) string {
-	raw := fmt.Sprintf("%d:%d", p.CreatedAt.UnixNano(), p.ID)
+	raw := fmt.Sprintf("%d:%d", p.TradedAt.UnixNano(), p.ID)
 	return base64.RawURLEncoding.EncodeToString([]byte(raw))
 }
 
@@ -55,7 +55,7 @@ func decodeCursor(s string) (*PriceCursor, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &PriceCursor{CreatedAt: time.Unix(0, n), ID: i}, nil
+	return &PriceCursor{TradedAt: time.Unix(0, n), ID: i}, nil
 }
 
 func (h *Handler) writeError(w http.ResponseWriter, r *http.Request, err error) {

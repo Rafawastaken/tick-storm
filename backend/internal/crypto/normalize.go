@@ -20,6 +20,7 @@ func toDomain(row cryptodb.CryptoPrice) Price {
 		Symbol:    row.CoinSymbol,
 		Price:     pgxkit.NumericToDecimal(row.CoinPrice),
 		TradeID:   row.TradeID,
+		TradedAt:  row.TradedAt.Time,
 		CreatedAt: row.CreatedAt.Time,
 	}
 }

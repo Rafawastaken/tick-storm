@@ -18,13 +18,6 @@ func NewHandler(svc *Service) *Handler {
 	return &Handler{svc: svc}
 }
 
-func (h *Handler) Routes() chi.Router {
-	r := chi.NewRouter()
-	r.Get("/{symbol}/latest", h.getLatest)
-	r.Get("/{symbol}/prices", h.listPrices)
-	return r
-}
-
 func (h *Handler) getLatest(w http.ResponseWriter, r *http.Request) {
 	price, err := h.svc.GetLatestPrice(r.Context(), GetLatestPriceIn{
 		Exchange:   r.URL.Query().Get("exchange"),

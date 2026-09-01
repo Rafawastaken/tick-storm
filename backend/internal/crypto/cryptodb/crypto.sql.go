@@ -12,9 +12,9 @@ import (
 )
 
 const getLatestPrice = `-- name: GetLatestPrice :one
-SELECT id, exchange, coin_symbol, coin_price, trade_id, created_at FROM crypto_prices
+SELECT id, exchange, coin_symbol, coin_price, trade_id, traded_at, created_at FROM crypto_prices
 WHERE exchange = $1 AND coin_symbol = $2
-ORDER BY created_at DESC, id DESC
+ORDER BY traded_at DESC, id DESC
 LIMIT 1
 `
 
@@ -32,14 +32,15 @@ func (q *Queries) GetLatestPrice(ctx context.Context, arg GetLatestPriceParams) 
 		&i.CoinSymbol,
 		&i.CoinPrice,
 		&i.TradeID,
+		&i.TradedAt,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const insertPrice = `-- name: InsertPrice :exec
-INSERT INTO crypto_prices (exchange, coin_symbol, coin_price, trade_id)
-VALUES ($1, $2, $3, $4)
+INSERT INTO crypto_prices (exchange, coin_symbol, coin_price, trade_id, traded_at)
+VALUES ($1, $2, $3, $4, $5)
 ON CONFLICT DO NOTHING
 `
 
@@ -48,6 +49,7 @@ type InsertPriceParams struct {
 	CoinSymbol string
 	CoinPrice  pgtype.Numeric
 	TradeID    *int64
+	TradedAt   pgtype.Timestamptz
 }
 
 func (q *Queries) InsertPrice(ctx context.Context, arg InsertPriceParams) error {
@@ -56,16 +58,17 @@ func (q *Queries) InsertPrice(ctx context.Context, arg InsertPriceParams) error 
 		arg.CoinSymbol,
 		arg.CoinPrice,
 		arg.TradeID,
+		arg.TradedAt,
 	)
 	return err
 }
 
 const listPricesForCoin = `-- name: ListPricesForCoin :many
-SELECT id, exchange, coin_symbol, coin_price, trade_id, created_at FROM crypto_prices
+SELECT id, exchange, coin_symbol, coin_price, trade_id, traded_at, created_at FROM crypto_prices
 WHERE exchange = $1
   AND coin_symbol = $2
-  AND (created_at, id) < ($3::timestamptz, $4::bigint)
-ORDER BY created_at DESC, id DESC
+  AND (traded_at, id) < ($3::timestamptz, $4::bigint)
+ORDER BY traded_at DESC, id DESC
 LIMIT $5
 `
 
@@ -98,6 +101,7 @@ func (q *Queries) ListPricesForCoin(ctx context.Context, arg ListPricesForCoinPa
 			&i.CoinSymbol,
 			&i.CoinPrice,
 			&i.TradeID,
+			&i.TradedAt,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
